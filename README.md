@@ -27,3 +27,6 @@ Suppose that you already collect your filtered Reddit comments (e.g. filtered by
 ```
 $ python getreddit.py --input_path /Users/username/folder/filtered/ --output_path /Users/username/folder/splitted/
 ```
+
+# How to use as a package library to be integrated in your python file
+To use `GetReddit` as package library, simply call them by scripting `from getreddit import *` in your python file. Specify `*` with the specific function you need to be integrated with your python script.
