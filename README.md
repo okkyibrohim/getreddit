@@ -30,3 +30,6 @@ $ python getreddit.py --input_path /Users/username/folder/filtered/ --output_pat
 
 # How to use as a package library to be integrated in your python file
 To use `GetReddit` as package library, simply call them by scripting `from getreddit import *` in your python file. Specify `*` with the specific function you need to be integrated with your python script.
+
+# Credit
+I'll be happy if you put a credit for this work. If you use this Python library, you must also put credit to the Pushshift team that provides the Reddit submissions (https://files.pushshift.io/reddit/submissions/) or comments (https://files.pushshift.io/reddit/comments/) data. If you processing a huge Reddit dataset using their provided dataset, you can also consider giving them donations: https://pushshift.io/donations/.
