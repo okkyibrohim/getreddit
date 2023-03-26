@@ -1,7 +1,7 @@
 # GetReddit
-A simple Python library to collect and filters Reddit data (submissions or comments) for re-training language model needs.
+A simple Python library to collect and filters Reddit data (submissions or comments) without Reddit API Access Token for re-training language model needs.
 ## About this repository
-Training or re-training language model for domain adaption sometimes needs a huge raw dataset. Reddit (https://www.reddit.com/) is one of the best places to collect dataset for domain adaption of the language model since there are various topic discussed there which is collected in one place called a "Subreddit". Pushshift (https://github.com/pushshift/api) are providing a great API to collect Reddit datasets based on your need but it is limited to a maximum of 500 submissions/comments per hit. To get more data, they provide a link to download full submissions (https://files.pushshift.io/reddit/submissions/) or comments (https://files.pushshift.io/reddit/comments/) from each month. This Python library is created to make us easily download, filter, and split to sentence the Reddit submissions/comments provided by Pushshift. 
+Training or re-training language model for domain adaption sometimes needs a huge raw dataset. Reddit (https://www.reddit.com/) is one of the best places to collect dataset for domain adaption of the language model since there are various topic discussed there which is collected in one place called a "Subreddit". Pushshift (https://github.com/pushshift/api) are providing a great API to collect Reddit datasets based on your need but it is limited to a maximum of 1000 submissions/comments per hit. To get more data, they provide a link to download full submissions (https://files.pushshift.io/reddit/submissions/) or comments (https://files.pushshift.io/reddit/comments/) from each month. This Python library is created to make us easily download, filter, and split to sentence the Reddit submissions/comments provided by Pushshift. 
 ## Main use
 In this Python library, we provide 3 different `mode` that you can use: <br />
 1. `download`: This `mode` type is used to download and filter the Reddit submissions/comments data from a particular month in one run.
@@ -30,6 +30,9 @@ $ python getreddit.py --input_path /Users/username/folder/filtered/ --output_pat
 
 # How to use as a package library to be integrated in your python file
 To use `GetReddit` as package library, simply call them by scripting `from getreddit import *` in your python file. Specify `*` with the specific function you need to be integrated with your python script.
+
+# Limitation
+This library is created for research needs, where the main purpose is just to collect the dataset without considering the runtime. The main limitation of this library is the filter process is done sequentially so that it may very slow. Therefore, it may not fit if you want to apply this library for production cases. Any modification and contribution to improving this library is more than welcome :) 
 
 # Credit
 I'll be happy if you put a credit for this work. If you use this Python library, you must also put credit to the Pushshift team that provides the Reddit submissions (https://files.pushshift.io/reddit/submissions/) and comments (https://files.pushshift.io/reddit/comments/) data. If you processing a huge Reddit dataset using their provided dataset, you can also consider giving them donations: https://pushshift.io/donations/.
