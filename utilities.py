@@ -42,31 +42,63 @@ def save_to_file(merged_dataframe,filter_list,filter_type,input_path,output_fold
             filter_name = "alldata_"
         else:
             flt = filter_list[i]
-            filter_name = flt+"_"+filter_type+"_"
+            flt = str(flt).replace(".","_DOT_")
+            flt = str(flt).replace(",","_COMA_")
+            flt = str(flt).replace(":","_COLON_")
+            flt = str(flt).replace(";","_SEMICOLON_")
+            filter_name = filter_type+"_"+flt+"_"
         name_with_path = output_folder_path+filter_name+get_stringname(get_filename(input_path))
+        if len(df) != 0:
+            try:
+                if save_type == "xlsx":
+                    saved_file_name = name_with_path+".xlsx"
+                    df.to_excel(saved_file_name, index=False)
+                elif save_type == "csv":
+                    saved_file_name = name_with_path+".csv"
+                    df.to_csv(saved_file_name, index=False)
+                elif save_type == "pickle":
+                    saved_file_name = name_with_path+".pickle"
+                    with open(saved_file_name, 'wb') as handle:
+                        pickle.dump(df, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                else:
+                    raise ValueError("Wrong save_type. Only 'xlsx', 'csv', or 'pickle' are allowed to be used as save_type.")
+                if filter_list == []:
+                    print(f'The Reddit data (all data without filtering) has been saved in {saved_file_name}.')
+                else:
+                    print(f'The Reddit data for {flt} {filter_type} has been saved in {saved_file_name}.')
+                del df
+            except:
+                raise ValueError("Cannot save the file into the output_folder_path defined. Make sure the output_folder_path is correct.")
+        else:
+            print(f'There is no Reddit {filter_type} data that contains {flt} in the input_path {input_path}.')
+
+def single_df_to_file(df,filter_type,flt,filter_name,input_path,output_folder_path,save_type):
+    if len(df) != 0:
         try:
+            if filter_type == "subreddit_list":
+                saved_file_name = output_folder_path+filter_name+"."+save_type
+            else:
+                saved_file_name = output_folder_path+filter_name+"_"+get_stringname(get_filename(input_path))+"."+save_type
             if save_type == "xlsx":
-                saved_file_name = name_with_path+".xlsx"
                 df.to_excel(saved_file_name, index=False)
             elif save_type == "csv":
-                saved_file_name = name_with_path+".csv"
                 df.to_csv(saved_file_name, index=False)
             elif save_type == "pickle":
-                saved_file_name = name_with_path+".pickle"
                 with open(saved_file_name, 'wb') as handle:
                     pickle.dump(df, handle, protocol=pickle.HIGHEST_PROTOCOL)
             else:
                 raise ValueError("Wrong save_type. Only 'xlsx', 'csv', or 'pickle' are allowed to be used as save_type.")
-            if filter_list == []:
-                print(f'The Reddit data (all data without filtering) has been saved in {saved_file_name}.')
-            else:
-                print(f'The Reddit data for {flt} {filter_type} has been saved in {saved_file_name}.')
         except:
             raise ValueError("Cannot save the file into the output_folder_path defined. Make sure the output_folder_path is correct.")
+    else:
+        if filter_type == "subreddit_list":
+            print(f'Cannot get subreddit that contains/discusses {flt}.This maybe because there is no subreddit that contains/discusses {flt}, internet problem connection problem, the scrapper getting blocked, or the Reddit HTML sctructure has been changed.')
+        else:
+            print(f'There is no Reddit {filter_type} data that contains {flt} in the input_path {input_path}.')
 
 def sentences_to_file(df,file_path,output_folder_path,save_type):
     try:
-        saved_file_name = output_folder_path+"splitted_"+get_filename(file_path)
+        saved_file_name = output_folder_path+"splitted_"+get_filename(file_path)+"."+save_type
         if save_type == "xlsx":
             df.to_excel(saved_file_name, index=False)
         elif save_type == "csv":

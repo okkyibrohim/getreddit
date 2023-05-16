@@ -1,5 +1,6 @@
 from utilities import *
 from getcontents import get_contents
+from getsubreddits import get_subreddit_list
 from splitcontents import split_contents
 import argparse
 import os
@@ -13,12 +14,50 @@ def main(args):
         if args.url_path != "":
             mode = "download"
             url_path = args.url_path
-        elif ".zst" in args.input_path:
+        elif '.zst' in args.input_path:
             mode = "filter"
         elif args.input_path != "":
             mode = "split"
         else:
-            raise ValueError("Please set the 'mode' argument. Choose 'download', 'filter', or 'split'.")
+            raise ValueError("Please set the 'mode' argument. Choose 'download', 'filter', 'split', or 'subreddit_list'.")
+    # Set default filter_type
+    filter_type = args.filter_type
+    if filter_type == "":
+        if mode == "download" or mode == "filter":
+            filter_type = "subreddit"
+            print(f"You are running {mode} mode but you do not set the 'filter_type' parameter so that it automatically to be set as 'subreddit'.")
+        elif mode == "subreddit_list":
+            filter_type = "subreddit_list"
+            print(f"You are running {mode} mode but you do not set the 'filter_type' parameter so that it automatically to be set as 'subreddit_list'.")
+        else:
+            if "RC" in f:
+                filter_type = "body"
+                print(f"You are running {mode} mode but you do not set the 'filter_type' parameter and we detect that you are trying to split a Reddit Comment (RC) file so that it automatically to be set as 'body'.")
+            elif "RS" in f:
+                filter_type = "title"
+                print(f"You are running {mode} mode but you do not set the 'filter_type' parameter and we detect that you are trying to split a Reddit Submission (RS) file so that it automatically to be set as 'title'.")
+    # Set argument for filter_list
+    filter_list = args.filter_list
+    if filter_list == "":
+        if mode == "subreddit_list":
+            raise ValueError("You try to run 'subreddit_list' mode. You should define the query list on 'filter_list' parameter. Run 'python getreddit.py -h' for the help.")
+        else:
+            filter_list = [] # This setting will set to collect all Reddit data
+    elif '.xlsx' in filter_list:
+        df_filter_list = pd.read_excel(filter_list)
+        filter_list = list(df_filter_list[filter_type])
+    elif '.csv' in filter_list:
+        df_filter_list = pd.read_csv(filter_list)
+        filter_list = list(df_filter_list[filter_type])
+    elif '.pickle' in filter_list:
+        df_filter_list = pd.read_pickle(filter_list)
+        filter_list = list(df_filter_list[filter_type])
+    else:
+        try:
+            filter_list = filter_list.split(',')
+            filter_list = [flt.replace('_',' ') for flt in filter_list]
+        except:
+            raise ValueError("Wrong filter_list declaration. Please correct it. Run 'python getreddit.py -h' for the help.")
     # Set argument for input_path
     input_path = args.input_path
     # Set argument for output_path
@@ -36,15 +75,6 @@ def main(args):
             reddit_type = "submission"
         else:
             raise ValueError("Wrong url_path or input_path. Make sure that you corectly set the url_path or input_path argument to download/filter a particular month of Reddit data.")
-        # Set argument for filter_list
-        filter_list = args.filter_list
-        if filter_list == "":
-            filter_list = [] # This setting will set to collect all Reddit data
-        else:
-            try:
-                filter_list = filter_list.split(',')
-            except:
-                raise ValueError("Wrong filter_list declaration. Please correct it.")
         # Set argument for attribute
         attribute_list = args.attribute_list
         if attribute_list == "":
@@ -66,12 +96,7 @@ def main(args):
             file_path = input_path+get_filename(url_path)
         else:
             file_path = input_path
-        # Set default filter_type
-        filter_type = args.filter_type
-        if filter_type == "":
-            filter_type = "subreddit"
-        merged_dataframe = get_contents(reddit_type,file_path,filter_list,filter_type,attribute_list,args.add_detail)
-        save_to_file(merged_dataframe,filter_list,filter_type,url_path,output_path,args.save_type)
+        get_contents(reddit_type,file_path,filter_list,filter_type,attribute_list,args.add_detail,output_path,args.save_type,"save_file")
         if args.delete_file == "yes":
             remove(file_path)
             print("The entire process to collect and/or filter the Reddit data has been done.")
@@ -79,6 +104,13 @@ def main(args):
             print("The entire process to collect and/or filter the Reddit data has been done.")
             print("You choose to not remove the original downloaded Reddit data. Beware that the original file may be very big and make your storage full.")
     
+    # Process for 'subreddit_list' mode
+    elif mode == "subreddit_list":
+        get_top_subreddit = args.get_top_subreddit
+        if get_top_subreddit == 0:
+            get_top_subreddit = "all"
+        get_subreddit_list(filter_list,filter_type,output_path,args.save_type,"save_file", get_top_subreddit, args.time_sleep, args.time_sleep_mode, args.last_day_sample, args.sample, args.threshold_sample, args.threshold_member,args.verbose,args.headless)            
+
     # Process for 'split' mode
     else:
         if (input_path == "") or (".zst" in input_path):
@@ -99,23 +131,13 @@ def main(args):
                         dataset = pd.read_csv(f)
                     else:
                         raise ValueError("Wrong save_type argument. Only 'pickle', 'excel', or 'csv' that is allowed to be used as save_type argument.")
-                    filter_type = args.filter_type
-                    if filter_type == "":
-                        if "RC" in f:
-                            filter_type = "body"
-                        elif "RS" in f:
-                            filter_type = "title"
                     print(f'Processing the file {file_idx} of {num_of_files} i.e. file {f} ...')
-                    flag = "no"
-                    try:
-                        df = split_contents(dataset,filter_type,args.verbose,file_idx,num_of_files)
-                        sentences_to_file(df,f,output_path,args.save_type)
-                        if args.delete_file == "yes":
-                            remove(f)
-                            print("The original filtered data {f} is removed.")
-                        print(f'Processing the file {file_idx} of {num_of_files} i.e. file {f} is done. The splitted sentence file is saved in {output_path}splitted_{get_filename(f)}')
-                    except:
-                        print(f'Failed to split sentence the file {file_idx} of {num_of_files} i.e. file {f}. This maybe because the processed file is an empty file and/or does not contains the filter_type {filter_type} that you choose. Please check the file.')
+                    df = split_contents(dataset,filter_type,args.verbose,file_idx,num_of_files)
+                    sentences_to_file(df,f,output_path,args.save_type)
+                    if args.delete_file == "yes":
+                        remove(f)
+                        print("The original filtered data {f} is removed.")
+                    print(f'Processing the file {file_idx} of {num_of_files} i.e. file {f} is done. The splitted sentence file is saved in {output_path}splitted_{get_filename(f)}')
             file_idx += 1
         print("The entire process to split the filtered Reddit data has been done.")
         if args.delete_file == "no":
@@ -124,7 +146,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--mode", help="The mode of use this library i.e. whether you want to download and filter ('download'), filter the downloaded dataset ('filter') or split based on sentences the filtered Reddit file ('split').",
+        "--mode", help="The mode of use this library i.e. whether you want to download and filter ('download'), filter the downloaded dataset ('filter'), split based on sentences the filtered Reddit file ('split'), or collecting subreddit list from a certain query list ('subreddit_list').",
         type=str, default=""
     )
     parser.add_argument(
@@ -140,11 +162,11 @@ if __name__ == "__main__":
         type=str, default=""
     )
     parser.add_argument(
-        "--output_path", help="The folder path to store your filtered or splitted (based on sentence) file.",
+        "--output_path", help="The folder path to store the output files.",
         type=str, default=""
     )
     parser.add_argument(
-        "--save_type", help="The file extension type that you want to store your collected and/or filtered Reddit data.",
+        "--save_type", help="The file extension type that you want to store your output files.",
         type=str, default="pickle"
     )
     parser.add_argument(
@@ -152,11 +174,11 @@ if __name__ == "__main__":
         type=str, default="no"
     )
     parser.add_argument(
-        "--filter_list", help="The words/phrases list that used to filter the Reddit data. Replace space with underscore, e.g. 'energy,climate_change,waste'. Do not set this parameter if you want to collect all Reddit data.",
+        "--filter_list", help="The words/phrases list that used to filter the Reddit data or to collect the subreddit list. Replace space with underscore, e.g. 'energy,climate_change,waste'. If you have a huge filter (query) list, you can save it in an excel, csv, or pickle with the name column is the same with the 'filter_type' parameter. Do not set this parameter if you want to collect all Reddit data in 'download' or 'filter' mode.",
         type=str, default=""
     )
     parser.add_argument(
-        "--filter_type", help="The Reddit attribute that you want to filter using your filter list (for 'scrap' or 'filter' mode) or that you want to split based on sentences (for 'split' mode).",
+        "--filter_type", help="The Reddit attribute that you want to filter using your filter list (for 'download' or 'filter' mode) or that you want to split based on sentences (for 'split' mode). If you run 'subreddit_list' mode to collect a subreddit list from a list of query ('filter_list'), the 'filter_type' should be set as the column name that contain your query list.",
         type=str, default=""
     )
     parser.add_argument(
@@ -165,6 +187,38 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--delete_file", help="The option to delete ('yes') the Reddit original file or not ('no').",
+        type=str, default="yes"
+    )
+    parser.add_argument(
+        "--get_top_subreddit", help="The top subreddit list that you want to collect for each query. This option only used for 'subreddit_list' mode. Leave this parameter blank or set 0 to collect all subreddit list from each query",
+        type=int, default=0
+    )
+    parser.add_argument(
+        "--time_sleep", help="The time (in seconds) to sleep for the scraping process. If your internet is slow, set a higher time to sleep e.g. 5 or 10 (only used for 'subreddit_list' mode). This option only used for 'subreddit_list' mode.",
+        type=int, default=2
+    )
+    parser.add_argument(
+        "--time_sleep_mode", help="The option to set whether the time_sleep only applied for the subreddit list scrapping process (set 'only_subreddit_scrapper' for this option) or all processes including for the subreddit statistic collection process (set 'all' for this option). Set 'all' if your internet speed is slow and you highly consider collecting the subreddit statistic. This option only used for 'subreddit_list' mode.",
+        choices=["only_subreddit_scrapper","all"], type=str, default="only_subreddit_scrapper"
+    )
+    parser.add_argument(
+        "--last_day_sample", help="The range of the last day that you want to get the subreddit comments/submissions that mention the query. This option only used for 'subreddit_list' mode.",
+        type=int, default=90
+    )
+    parser.add_argument(
+        "--sample", help="The number of total samples that you want to calculate the comments/submissions that mention the query. The maximum is 1,000 following the Pushift API limitation. This option only used for 'subreddit_list' mode.",
+        type=int, default=1000
+    )
+    parser.add_argument(
+        "--threshold_sample", help="The number of thresholds for minimum comments/submissions in a subreddit that mentions the query. This option only used for 'subreddit_list' mode.",
+        type=int, default=100
+    )
+    parser.add_argument(
+        "--threshold_member", help="The number of thresholds for total members in a subreddit. This option only used for 'subreddit_list' mode.",
+        type=int, default=10000
+    )
+    parser.add_argument(
+        "--headless", help="The option to show the browser scrapping process or not. It should be set as 'yes' if you run this script in a server that does not has a browser GUI. This option only used for 'subreddit_list' mode.",
         type=str, default="yes"
     )
     args = parser.parse_args()
